@@ -25,4 +25,5 @@ func SetupRoutes(app *fiber.App) {
 	auth.Post("/login", controllers.NotImplemented)
 	auth.Post("/forget-password", controllers.NotImplemented)
 	auth.Get("/refresh", controllers.NotImplemented)
+	auth.Get("/active-user/:userid", controllers.ActiveUser)
 }

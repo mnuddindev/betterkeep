@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/mnuddindev/betterkeep/db"
 	"github.com/mnuddindev/betterkeep/models"
 	"github.com/mnuddindev/betterkeep/utils"
@@ -66,6 +67,7 @@ func ActiveUser(c *fiber.Ctx) error {
 	type Body struct {
 		Otp int64 `json:"otp"`
 	}
+	demoUser := "00000000-0000-0000-0000-000000000000"
 	b := new(Body)
 	if err := c.BodyParser(b); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -73,4 +75,61 @@ func ActiveUser(c *fiber.Ctx) error {
 			"status": fiber.StatusBadRequest,
 		})
 	}
+	userid, _ := uuid.Parse(c.Params("userid"))
+	if userid.String() == demoUser {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error":  "user not found",
+			"status": fiber.StatusNotFound,
+		})
+	}
+	user, err := db.UserById(userid)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error":  err.Error(),
+			"status": fiber.StatusNotFound,
+		})
+	}
+	if user.ID.String() == demoUser {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error":  "user not found",
+			"status": fiber.StatusNotFound,
+		})
+	}
+	if b.Otp != user.Verification {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":  "otp not matched",
+			"status": fiber.StatusBadRequest,
+		})
+	} else {
+		if user.Verified {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":  "otp expired",
+				"status": fiber.StatusInternalServerError,
+			})
+		}
+		err = db.UserActive(userid)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":  "failed to active account, internal server error",
+				"status": fiber.StatusInternalServerError,
+			})
+		}
+	}
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status":  fiber.StatusOK,
+		"message": "login success",
+		"data": fiber.Map{
+			"user_id":       user.ID,
+			"name":          user.FirstName + " " + user.LastName,
+			"email":         user.Email,
+			"profile_photo": user.ProfilePhoto,
+			"password":      "Your Password",
+			"message":       "your account activated.please login now!!",
+			"status":        fiber.StatusOK,
+		},
+	})
+}
+
+func Login(c *fiber.Ctx) error {
+
 }
