@@ -7,10 +7,12 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/mnuddindev/betterkeep/auth"
+	"github.com/mnuddindev/betterkeep/db"
 	"github.com/mnuddindev/betterkeep/routes"
 )
 
 func main() {
+	db.Connect()
 	port := auth.Config("APP_PORT")
 	app := fiber.New()
 	app.Use(logger.New())

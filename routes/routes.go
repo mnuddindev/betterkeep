@@ -21,8 +21,8 @@ func SetupRoutes(app *fiber.App) {
 	user.Delete("/:id", controllers.NotImplemented)
 
 	// login system
-	auth.Get("/register", controllers.NotImplemented)
-	auth.Get("/login", controllers.NotImplemented)
-	auth.Get("/forget-password", controllers.NotImplemented)
+	auth.Post("/register", controllers.CreateUser)
+	auth.Post("/login", controllers.NotImplemented)
+	auth.Post("/forget-password", controllers.NotImplemented)
 	auth.Get("/refresh", controllers.NotImplemented)
 }
