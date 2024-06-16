@@ -3,12 +3,11 @@ package db
 import (
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/mnuddindev/betterkeep/auth"
 	"github.com/mnuddindev/betterkeep/models"
 	"github.com/mnuddindev/betterkeep/utils"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -21,12 +20,10 @@ var DB DBInstance
 
 func Connect() {
 	var err error
-	p := auth.Config("DB_PORT")
-	port, err := strconv.ParseUint(p, 10, 32)
-	utils.CheckError(err, "Error parsing str to int db")
-	dsn := fmt.Sprintf("%s:%s@tcp(localhost:%s)/%s", auth.Config("DB_USER"), auth.Config("DB_PASSWORD"), port, auth.Config("DB_NAME"))
-	connection, err := gorm.Open(mysql.New(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", auth.Config("DB_HOST"), auth.Config("DB_USER"), auth.Config("DB_PASSWORD"), auth.Config("DB_NAME"), auth.Config("DB_PORT"))
+	connection, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger:         logger.Default.LogMode(logger.Info),
+		TranslateError: true,
 	})
 	utils.CheckError(err, "database connection failed")
 	connection.Logger = logger.Default.LogMode(logger.Info)

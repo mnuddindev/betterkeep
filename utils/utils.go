@@ -1,9 +1,14 @@
 package utils
 
 import (
+	"crypto/rand"
 	"log"
+	"math/big"
 	"reflect"
 	"regexp"
+
+	"golang.org/x/crypto/bcrypt"
+	gomail "gopkg.in/gomail.v2"
 )
 
 func IsEmpty(data interface{}) bool {
@@ -36,5 +41,41 @@ func IsEmail(email string) bool {
 func CheckError(err error, message string) {
 	if err != nil {
 		log.Println(err)
+	}
+}
+
+func HashPassword(password string) (string, error) {
+	hpass, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	CheckError(err, "failed to hash password")
+	return string(hpass), err
+}
+
+func ComparePass(hashedPass, pass string) error {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPass), []byte(pass))
+	CheckError(err, "failed to compare passwords")
+	return err
+}
+
+func GenerateOTP() (int64, error) {
+	max := big.NewInt(999999)
+	numb, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return 0, err
+	}
+	return numb.Int64(), nil
+}
+
+func ActiveUser(code, email, username string) {
+	link := "http://localhost:4000/active-user"
+	messBody := "Hello " + username + ", \n Your Activation code is " + code + " \n\n Active your Account By clicking on <a href='" + link + "'>this</a> link"
+
+	mail := gomail.NewMessage()
+	mail.SetHeader("From", "support@inadislam.com")
+	mail.SetHeader("To", email)
+	mail.SetHeader("Subject", "Activate your account")
+	mail.SetBody("text/html", messBody)
+	dialer := gomail.NewDialer("0.0.0.0", 1025, "", "")
+	if err := dialer.DialAndSend(mail); err != nil {
+		panic(err)
 	}
 }
