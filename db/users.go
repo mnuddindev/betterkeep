@@ -63,9 +63,9 @@ func UserActive(uid uuid.UUID) error {
 	return nil
 }
 
-func UserByEmail(userid uuid.UUID) (models.Users, error) {
+func UserByEmail(useremail string) (models.Users, error) {
 	var user models.Users
-	err := DB.Db.Debug().Model(&models.Users{}).Where("ID = ?", userid).Find(&user).Error
+	err := DB.Db.Debug().Model(&models.Users{}).Where("email = ?", useremail).Find(&user).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return models.Users{}, errors.New("user not found")
 	}

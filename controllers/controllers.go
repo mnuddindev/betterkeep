@@ -1,10 +1,13 @@
 package controllers
 
 import (
+	"errors"
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/mnuddindev/betterkeep/auth"
 	"github.com/mnuddindev/betterkeep/db"
 	"github.com/mnuddindev/betterkeep/models"
 	"github.com/mnuddindev/betterkeep/utils"
@@ -75,6 +78,12 @@ func ActiveUser(c *fiber.Ctx) error {
 			"status": fiber.StatusBadRequest,
 		})
 	}
+	if utils.IsEmpty(b.Otp) {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error":  "fields cannot be empty",
+			"status": fiber.StatusUnauthorized,
+		})
+	}
 	userid, _ := uuid.Parse(c.Params("userid"))
 	if userid.String() == demoUser {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -131,5 +140,66 @@ func ActiveUser(c *fiber.Ctx) error {
 }
 
 func Login(c *fiber.Ctx) error {
-
+	user := new(models.Login)
+	if err := c.BodyParser(user); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":  err.Error(),
+			"status": fiber.StatusBadRequest,
+		})
+	}
+	if utils.IsEmpty(user.Email) || utils.IsEmail(user.Password) {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error":  "fields cannot be empty",
+			"status": fiber.StatusUnauthorized,
+		})
+	}
+	u, err := db.UserByEmail(user.Email)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error":  err.Error(),
+			"status": fiber.StatusNotFound,
+		})
+	}
+	if !utils.IsEmail(user.Email) {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error":  errors.New("invalid email format"),
+			"status": fiber.StatusUnauthorized,
+		})
+	}
+	if !u.Verified {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error":  "verify your account first!!",
+			"status": fiber.StatusUnauthorized,
+		})
+	}
+	if user.Email != u.Email {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error":  errors.New("user with this email not found"),
+			"status": fiber.StatusUnauthorized,
+		})
+	}
+	if err := utils.ComparePass(u.Password, user.Password); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":  err.Error(),
+			"status": fiber.StatusUnauthorized,
+		})
+	}
+	atoken, rtoken, err := auth.GenerateTokens(u)
+	if err != nil {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{
+			"error":  "token generation failed",
+			"status": fiber.StatusUnprocessableEntity,
+		})
+	}
+	rt := fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    rtoken,
+		Expires:  time.Now().Add(30 * 24 * time.Hour),
+		HTTPOnly: true,
+	}
+	c.Cookie(&rt)
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message":      "success",
+		"access_token": atoken,
+	})
 }
